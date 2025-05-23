@@ -1,0 +1,182 @@
+const APP = {
+  ver: "1.2.0",
+  user: { id: 0 },
+  cfg: {
+    mod: true,
+    auto: false,
+    questionSpoof: true,
+    darkMode: true,
+    autoSpeed: 750,
+    speedOptions: [750, 1000, 1250, 1500]
+  }
+};
+
+// Função para carregar scripts externos
+async function loadScript(url) {
+  const response = await fetch(url);
+  const script = await response.text();
+  eval(script);
+}
+
+// Função para carregar folhas de estilo externas
+async function loadCss(url) {
+  return new Promise(resolve => {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.type = "text/css";
+    link.href = url;
+    link.onload = resolve;
+    document.head.appendChild(link);
+  });
+}
+
+// Função para exibir notificações (toasts)
+function sendToast(message, duration = 5000, position = "bottom") {
+  if (typeof Toastify !== 'undefined') {
+    Toastify({
+      text: message,
+      duration,
+      gravity: position,
+      position: "center",
+      stopOnFocus: true,
+      style: {
+        background: "#000000"
+      }
+    }).showToast();
+  } else {
+    console.log("Toast:", message);
+  }
+}
+
+// Função para tocar áudio
+const playAudio = src => {
+  new Audio(src).play();
+};
+
+class UI {
+  static init() {
+    const panel = document.createElement("div");
+    panel.id = "Sexo-panel";
+    Object.assign(panel.style, {
+      position: "fixed",
+      top: "10px",
+      right: "15px",
+      width: "200px",
+      background: "linear-gradient(145deg, #1a1a1a, #111)",
+      borderRadius: "12px",
+      display: "flex",
+      flexDirection: "column",
+      padding: "12px",
+      zIndex: "9999",
+      boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
+      border: "1px solid #333",
+      maxWidth: "90%"
+    });
+    panel.innerHTML = `
+      <div class="Sexo-header" style="cursor: pointer; color: white; font-weight: bold; margin-bottom: 10px;">
+        Sexo ${APP.ver}
+      </div>
+      <div class="Sexp-content">
+        <label><input type="checkbox" id="autoCheck"> Auto Complete</label><br>
+        <label><input type="checkbox" id="spoofCheck" checked> Question Spoof</label><br>
+        <label><input type="checkbox" id="darkModeCheck" checked> Dark Mode</label><br>
+        <div id="speedControlContainer" style="display: flex; align-items: center;">
+          <span>Velocidade</span>
+          <input type="range" id="speedSlider" min="0" max="3" step="1" value="0">
+          <span id="speedValue">${APP.cfg.autoSpeed}ms</span>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(panel);
+
+    // Adicionar evento de clique ao cabeçalho para encolher/expandir o menu
+    const header = document.querySelector('.Sexo-header');
+    const content = document.querySelector('.Sexo-content');
+    header.addEventListener('click', () => {
+      header.classList.toggle('collapsed');
+      content.classList.toggle('collapsed');
+      // Salvar o estado do menu no localStorage
+      const isCollapsed = header.classList.contains('collapsed');
+      localStorage.setItem('Sexp-collapsed', isCollapsed);
+      // Mostrar toast informativo
+      sendToast(isCollapsed ? "\\\\\\\ Fechou essa porra" : "Abriu essa porra", 1000);
+    });
+
+    // Verificar se o menu estava recolhido anteriormente
+    const wasCollapsed = localStorage.getItem('Sexo-collapsed') === 'true';
+    if (wasCollapsed) {
+      header.classList.add('collapsed');
+      content.classList.add('collapsed');
+    }
+
+    // Setup event listeners
+    document.getElementById("autoCheck").onchange = event => {
+      APP.cfg.auto = event.target.checked;
+      document.getElementById("speedControlContainer").style.display = APP.cfg.auto ? "flex" : "none";
+      sendToast(APP.cfg.auto ? "✅ Auto Sexo Entro" : "❌ Auto Sexo Saiu", 2000);
+    };
+
+    // Configurar o slider de velocidade
+    const speedSlider = document.getElementById("speedSlider");
+    const speedValue = document.getElementById("speedValue");
+    // Definir o valor inicial do slider
+    const initialIndex = APP.cfg.speedOptions.indexOf(APP.cfg.autoSpeed);
+    speedSlider.value = initialIndex >= 0 ? initialIndex : 0;
+
+    // Adicionar evento de mudança ao slider
+    speedSlider.oninput = () => {
+      const index = parseInt(speedSlider.value);
+      const speed = APP.cfg.speedOptions[index];
+      APP.cfg.autoSpeed = speed;
+      speedValue.textContent = speed + "ms";
+    };
+
+    // Adicionar evento de mudança completa para mostrar toast
+    speedSlider.onchange = () => {
+      const index = parseInt(speedSlider.value);
+      const speed = APP.cfg.speedOptions[index];
+      sendToast(`⏱️ Velocidade alterada para ${speed}ms`, 2000);
+    };
+
+    document.getElementById("spoofCheck").onchange = event => {
+      APP.cfg.questionSpoof = event.target.checked;
+      sendToast(APP.cfg.questionSpoof ? "✅ Habilitou o Sexo Spoof" : "❌ Desabilitou o Sexo Spoof", 2000);
+    };
+
+    document.getElementById("darkModeCheck").onchange = event => {
+      APP.cfg.darkMode = event.target.checked;
+      if (typeof DarkReader !== 'undefined') {
+        if (APP.cfg.darkMode) {
+          DarkReader.enable();
+          sendToast("🌙 Modo Juan Habilitado", 2000);
+        } else {
+          DarkReader.disable();
+          sendToast("☀️ Modo Juan Desabilitado", 2000);
+        }
+      } else {
+        console.error("Juan não está disponível");
+        sendToast("⚠️ Juan Mode não disponível. Recarregue a página.", 3000);
+      }
+    };
+
+    // Ativar Dark Mode por padrão
+    if (APP.cfg.darkMode && typeof DarkReader !== 'undefined') {
+      DarkReader.enable();
+    }
+  }
+}
+
+class Core {
+  static init() {
+    // Inicialização sequencial das funcionalidades
+    this.setupMod();
+    this.setupAuto();
+  }
+
+  static async loadExternalLibraries() {
+    try {
+      await loadCss("https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css");
+      await loadScript("https://cdn.jsdelivr.net/npm/toastify-js");
+      await loadScript
+::contentReference[oaicite:5]{index=5}
+ 
